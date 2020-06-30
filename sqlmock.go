@@ -23,8 +23,8 @@ type Config struct {
 	DontSupportRenameIndex    bool
 	DontSupportRenameColumn   bool
 
-	database *sql.DB
-	mock     sqlmock.Sqlmock
+	conn *sql.DB
+	mock sqlmock.Sqlmock
 }
 
 // Open mock database with dsn
@@ -34,7 +34,7 @@ func Open(driverName string, dsn string) (db *gorm.DB, mock sqlmock.Sqlmock, err
 		DriverName: driverName,
 	}
 
-	config.database, config.mock, err = sqlmock.NewWithDSN(dsn)
+	config.conn, config.mock, err = sqlmock.NewWithDSN(dsn)
 	if err != nil {
 		return
 	}
@@ -45,7 +45,7 @@ func Open(driverName string, dsn string) (db *gorm.DB, mock sqlmock.Sqlmock, err
 // New mock database with config
 func New(config Config) (db *gorm.DB, mock sqlmock.Sqlmock, err error) {
 
-	config.database, config.mock, err = sqlmock.New()
+	config.conn, config.mock, err = sqlmock.New()
 	if err != nil {
 		return
 	}
@@ -61,7 +61,7 @@ func newMock(config *Config) (db *gorm.DB, mock sqlmock.Sqlmock, err error) {
 	case "mysql":
 		dialector = mysql.New(mysql.Config{
 			DSN:                       config.DSN,
-			Database:                  config.database,
+			Conn:                      config.conn,
 			SkipInitializeWithVersion: config.SkipInitializeWithVersion,
 			DefaultStringSize:         config.DefaultStringSize,
 			DisableDatetimePrecision:  config.DisableDatetimePrecision,
