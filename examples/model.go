@@ -34,3 +34,9 @@ func (service *Service) Update(post *Post, data map[string]interface{}) error {
 
 	return service.db.Model(post).Updates(data).Error
 }
+
+// Destroy post
+func (service *Service) Destroy(id uint) error {
+
+	return service.db.Delete(&Post{}, "id = ?", id).Error
+}

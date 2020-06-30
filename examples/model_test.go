@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	goSqlmock "github.com/DATA-DOG/go-sqlmock"
 	"gorm.io/gorm"
@@ -36,7 +37,8 @@ func TestCreate(t *testing.T) {
 			nil,                 // DeletedAt
 			"Post title",        // Title
 			sqlmock.AnyString{}, // Body
-		).WillReturnResult(goSqlmock.NewResult(1, 1))
+		).
+		WillReturnResult(goSqlmock.NewResult(1, 1))
 
 	var post = &Post{
 		Title: "Post title",
@@ -51,7 +53,13 @@ func TestCreate(t *testing.T) {
 
 func TestGet(t *testing.T) {
 
-	mock.ExpectExec("SELECT * FROM `posts` WHERE id = ? AND `posts`.`deleted_at` IS NULL ORDER BY `posts`.`id`").WithArgs(1).WillReturnResult(goSqlmock.NewResult(1, 0))
+	mock.ExpectQuery("SELECT (.+) FROM `posts` WHERE (.+) AND `posts`.`deleted_at` IS NULL ORDER BY `posts`.`id` LIMIT 1").
+		WithArgs(1).
+		WillReturnRows(
+			goSqlmock.
+				NewRows([]string{"id", "title", "body", "created_at", "updated_at", "deleted_at"}).
+				AddRow(1, "Post title", "Post body", time.Now(), time.Now(), nil),
+		)
 
 	_, err := service.Get(uint(1))
 	if err != nil {
@@ -61,15 +69,14 @@ func TestGet(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 
-	mock.ExpectBegin()
 	mock.ExpectExec("UPDATE `posts` SET (.+) WHERE (.+)").
 		WithArgs(
 			"Post body[update]",  // Body
 			"Post title[update]", // Title
 			sqlmock.AnyTime{},    // UpdatedAt
 			1,
-		).WillReturnResult(goSqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
+		).
+		WillReturnResult(goSqlmock.NewResult(1, 1))
 
 	var post = &Post{
 		Model: gorm.Model{
@@ -85,5 +92,17 @@ func TestUpdate(t *testing.T) {
 	err := service.Update(post, data)
 	if err != nil {
 		t.Error("errors happened when update post: ", err.Error())
+	}
+}
+
+func TestDestroy(t *testing.T) {
+
+	mock.ExpectExec("UPDATE `posts` SET (.+) WHERE id = ?").
+		WithArgs(sqlmock.AnyTime{}, 1).
+		WillReturnResult(goSqlmock.NewResult(0, 1))
+
+	err := service.Destroy(uint(1))
+	if err != nil {
+		t.Error("errors happened when delete post: ", err.Error())
 	}
 }
